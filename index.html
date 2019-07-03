@@ -1,0 +1,127 @@
+<html>
+<head>
+  <title>Fullscreen background color</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.10/dist/vue.js"></script>
+  <link href="https://fonts.googleapis.com/css?family=Roboto&display=swap" rel="stylesheet"/>
+  <style>
+    body {
+      font-family: 'Roboto', Arial, sans-serif;
+      font-weight: 400;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+    body > div > div {
+      align-items: center;
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    [type="text"] {
+      border-radius: 3px,
+      border: 1px #666 solid;
+      padding: 3px 6px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div @click="toggleInput">
+      <div v-if="inputDisplay">
+        <div style="padding: 5px 0">Manual input</div>
+        <div>
+          <input type="text" @change="colorChanged" v-model="color" @click.stop="doThis" placeholder="color"/>
+        </div>
+        <div style="margin-top: 10px;">
+          <input type="file" id="fileinput" name="fileinput" accept="image/*" capture="camera" @change="uploadPhoto" @focus.stop="doThis" @click.stop="doThis"/>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    function rgbToHex(r, g, b) {
+      if (r > 255 || g > 255 || b > 255)
+        throw "Invalid color component";
+      return ((r << 16) | (g << 8) | b).toString(16);
+    }
+
+    new Vue({
+      el: '#app',
+      data: {
+        status: '',
+        color: '',
+        inputDisplay: true
+      },
+      methods: {
+        colorChanged: function() {
+          window.localStorage.setItem('color', this.color);
+          document.body.style.background = '#' + this.color.replace('#', '')
+        },
+        toggleInput: function() {
+          if (!this.inputDisplay) {
+            this.inputDisplay = true;
+            return;
+          }
+          var that = this;
+          setTimeout(function() {
+            that.inputDisplay = !that.inputDisplay;
+          }, 1500);
+        },
+        doThis: function() {
+        },
+        uploadPhoto: function() {
+          var that = this;
+          var file = document.getElementById('fileinput').files[0];
+          if (file.type.match(/image*/)) {
+            var reader = new FileReader();
+            reader.onload = function(readerEvent) {
+              /* global Image*/
+              var image = new Image();
+              image.onload = function(imageEvent) {
+                var canvas = document.createElement('canvas');
+                var maxSize = 800;
+                var width = image.width;
+                var height = image.height;
+                if (width > height) {
+                  if (width > maxSize) {
+                    height *= maxSize / width;
+                    width = maxSize;
+                  }
+                } else {
+                  if (height > maxSize) {
+                    width *= maxSize / height;
+                    height = maxSize;
+                  }
+                }
+                canvas.width = width;
+                canvas.height = height;
+                var c = canvas.getContext('2d');
+                c.drawImage(image, 0, 0, width, height);
+
+                var p = c.getImageData(Math.floor(width / 2), Math.floor(height / 2), 1, 1).data;
+                console.log(p);
+                that.color = '' + ("000000" + rgbToHex(p[0], p[1], p[2])).slice(-6);
+                document.body.style.background = '#' + that.color.replace('#', '')
+                window.localStorage.setItem('color', that.color);
+              };
+              image.src = readerEvent.target.result;
+            }
+            reader.readAsDataURL(file);
+          }
+
+          this.status = 'uploading';
+        }
+      },
+      mounted: function() {
+        this.$nextTick(function() {
+          if (window.localStorage.getItem('color')) {
+            this.color = window.localStorage.getItem('color');
+            document.body.style.background = '#' + this.color.replace('#', '')
+          }
+        })
+      }
+    })
+  </script>
+</body>
+</html>
